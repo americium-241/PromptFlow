@@ -1,5 +1,3 @@
-# Prompt Framework README
-
 ## Introduction
 
 Welcome to the Prompt Framework! This framework provides a modular and reusable approach to building workflows. Its plugin-based architecture allows for easy extension and customization of functionalities. The framework focuses on essential features such as string management, recursive templates, and agnostic modular workflows. Being file-based, it allows for seamless versioning and easy integration with version control systems.
