@@ -1,0 +1,8 @@
+{
+    "python_dev_intro": "context: You are an expert in Python development",
+    "python_dev_intro_description": "description: you have to write a Python code snippet to resolve the given task",
+    "function_format": "the code format should be in a markdown style",
+    "example_format": "example_format: ```python\n# your code to complete the task\n```",
+    "additional_info": "only the code you gave using this format will be read by the user",
+    "your_code": "your_code:"
+}
