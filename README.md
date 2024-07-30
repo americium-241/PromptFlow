@@ -74,19 +74,19 @@ The framework uses Jinja2 templates stored in the `data/templates/` directory:
   {{ python_dev_intro_description }}
   ```
 
+- `python_dev_markdown.j2`:
+  ```jinja
+  {{ function_format }}
+  {{ example_format }}
+  {{ additional_info }}
+  ```
+
 - `python_dev_final.j2`:
   ```jinja
   {% include 'python_dev_description.j2' %}
   task: {{ task }}
   {% include 'python_dev_markdown.j2' %}
   {{ your_code }}
-  ```
-
-- `python_dev_markdown.j2`:
-  ```jinja
-  {{ function_format }}
-  {{ example_format }}
-  {{ additional_info }}
   ```
 
 ### Strings
@@ -105,7 +105,7 @@ Strings are managed using JSON files in the `data/strings/` directory:
   }
   ```
 
-## Available Plugins
+## EXAMPLE Plugins
 
 ### PythonAgentExePlugin
 
