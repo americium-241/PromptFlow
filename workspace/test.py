@@ -2,7 +2,7 @@
 from core_system import CoreSystem
 
 config = {
-    'plugin_directory': ["action_plugins", "base_plugin_lib"],
+    'plugin_directory': ["data/actions", "base_plugin_lib"],
     'template_dir': "data/templates/",
     'string_dir': "data/strings/",
     'debug': True
