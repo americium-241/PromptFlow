@@ -1,8 +1,8 @@
-# workspace/test.py
+# workspace/reflexion_dynamic_recursive.py
 from core_system import CoreSystem
 
 config = {
-    'plugin_directory': ["data/actions", "base_plugin_lib"],
+    'plugin_directory': ["data/actions"],
     'template_dir': "data/templates/",
     'string_dir': "data/strings/",
     'debug': True
@@ -10,132 +10,84 @@ config = {
 
 core = CoreSystem(config)
 
-# List all registered actions
+# List all registered plugin actions
 try:
-    actions = core.execute('list_actions')
-    print(f"Registered actions: {actions}\n")
+    actions = core.execute_action('list_actions')
+    print(f"Registered plugin actions: {actions}\n")
 except Exception as e:
     print(f"Error listing actions: {e}")
 
 # Set up the model and problem
-core.execute('container_set', key='model', value='llama3')
-core.execute('container_set', key='problem', value='Design a scalable web application architecture.')
+core.set('model', 'llama3')
+core.set('problem', 'Design a scalable web application architecture.')
 
-# Step 1: Estimate Complexity
-try:
-    # Use the complexity estimator plugin
-    core.execute('complexity_estimator_agent')
+# Set maximum limits for depth and breadth
+MAX_DEPTH_LIMIT = 3   # Maximum depth allowed
+MAX_BREADTH_LIMIT = 3 # Maximum breadth allowed
 
-    # Retrieve the complexity estimate
-    complexity_estimate = core.execute('container_get', 'complexity_estimate')
-    print("\nComplexity Estimate:")
-    print(complexity_estimate)
+# Assume default depth and breadth
+depth = MAX_DEPTH_LIMIT
+breadth = MAX_BREADTH_LIMIT
+print(f"Using Depth: {depth}, Breadth: {breadth}")
 
-    # Extract depth and breadth values
-    depth = None
-    breadth = None
-    for item_dict in complexity_estimate:
-        for key, value in item_dict.items():
-            if key == 'depth':
-                try:
-                    depth = int(value)
-                except ValueError:
-                    depth = None
-            elif key == 'breadth':
-                try:
-                    breadth = int(value)
-                except ValueError:
-                    breadth = None
-
-    if depth is None or breadth is None:
-        print("Failed to retrieve valid depth and breadth values.")
-        # Set default values or handle the error
-        depth = 3
-        breadth = 5
-
-    print(f"Using Depth: {depth}, Breadth: {breadth}")
-
-except Exception as e:
-    print(f"Error estimating complexity: {e}")
-    # Set default values in case of error
-    depth = 3
-    breadth = 5
-
-# Now proceed with the recursive exploration using the estimated depth and breadth
-MAX_DEPTH = depth   # Use the estimated depth
-MAX_BREADTH = breadth # Use the estimated breadth
-
-# Recursive exploration function
 def explore_concepts(concept, current_depth):
-    if current_depth > MAX_DEPTH:
+    if current_depth > depth:
         return None
 
-    print(f"\n{'  ' * current_depth}Exploring at depth {current_depth}: {concept}")
+    indent = '  ' * (current_depth - 1)
+    print(f"\n{indent}Exploring at depth {current_depth}: {concept}")
 
-    # Set the current concept in the container
-    core.execute('container_set', key='concept', value=concept)
+    # Decide whether to explore this concept further
+    core.set('concept', concept)
+    should_explore = core.execute_action('should_explore_agent')
+
+    if not should_explore:
+        print(f"{indent}Decided not to explore '{concept}' further.")
+        return None
 
     # Generate sub-concepts
-    core.execute('list_subconcepts_agent')
+    core.execute_action('list_subconcepts_agent')
 
     # Retrieve the sub-concepts
-    subconcepts = core.execute('container_get', 'subconcepts')
+    subconcepts = core.get('subconcepts')
 
     # Check if subconcepts were retrieved
     if not subconcepts:
-        print(f"{'  ' * current_depth}No further concepts found.")
+        print(f"{indent}No further concepts found for '{concept}'.")
         return None
 
-    # Prepare items for rating
-    core.execute('container_set', key='items_to_rate', value=subconcepts)
-    core.execute('container_set', key='item_type', value='concepts')
-
-    # Rate the subconcepts
-    core.execute('rating_agent')
-
-    # Get the rated subconcepts
-    rated_subconcepts = core.execute('container_get', 'rated_concepts')
-
-    # Process rated subconcepts
-    flattened_rated_subconcepts = []
-    for item_dict in rated_subconcepts:
+    # Flatten the subconcepts and limit to breadth
+    flattened_subconcepts = []
+    for item_dict in subconcepts:
         for item_key, item_value in item_dict.items():
-            if isinstance(item_value, dict):
-                text = item_value.get('text', '').strip()
-                try:
-                    rating = int(item_value.get('rating', 0))
-                except ValueError:
-                    rating = 0
-            else:
-                text = item_value.strip()
-                rating = 0
-            flattened_rated_subconcepts.append({'text': text, 'rating': rating})
+            flattened_subconcepts.append((item_key, item_value))
 
-    # Sort based on rating
-    sorted_subconcepts = sorted(flattened_rated_subconcepts, key=lambda x: x['rating'], reverse=True)
-    # Keep top MAX_BREADTH
-    filtered_subconcepts = sorted_subconcepts[:MAX_BREADTH]
+    # Limit to breadth
+    flattened_subconcepts = flattened_subconcepts[:breadth]
 
     # Collect concepts and recurse
     concept_tree = {}
-    for sub in filtered_subconcepts:
-        sub_text = sub['text']
-        sub_rating = sub['rating']
-        print(f"{'  ' * current_depth}- {sub_text} (Rating: {sub_rating})")
-        # Recurse into the sub-concept
-        sub_tree = explore_concepts(sub_text, current_depth + 1)
-        concept_tree[sub_text] = {
-            'rating': sub_rating,
-            'subconcepts': sub_tree
-        }
+    for item_key, item_value in flattened_subconcepts:
+        if isinstance(item_value, str):
+            sub_text = item_value.strip()
+            print(f"{indent}- {sub_text}")
+            # Recurse into the sub-concept
+            sub_tree = explore_concepts(sub_text, current_depth + 1)
+            concept_tree[sub_text] = sub_tree
+        elif isinstance(item_value, dict):
+            sub_text = item_key.strip()
+            print(f"{indent}- {sub_text}")
+            # Recurse into the sub-concept with item_value
+            sub_tree = explore_concepts(item_value, current_depth + 1)
+            concept_tree[sub_text] = sub_tree
+        else:
+            # Handle other types if necessary
+            pass
 
     return concept_tree
 
-# Start the exploration from the main problem
 try:
-    concept =core.execute('container_get', 'problem')
-    print('___________________________________________')
-    print(concept)
+    concept = core.get('problem')
     concept_hierarchy = explore_concepts(concept, current_depth=1)
 except Exception as e:
     print(f"Error executing recursive exploration: {e}")

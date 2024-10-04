@@ -1,7 +1,6 @@
 # plugin_loader.py
 import importlib.util
 import os
-import logging
 import inspect
 from typing import Dict, Any
 from plugin_base import PluginBase
@@ -9,7 +8,7 @@ from logger import LoggerFactory
 from custom_exceptions import PluginLoaderError
 
 class PluginLoader:
-    def __init__(self, directories: list[str], debug: bool = False):
+    def __init__(self, directories: list, debug: bool = False):
         self.directories = directories
         self.debug = debug
         self.logger = LoggerFactory.create_logger(self.__class__.__name__, self.debug)

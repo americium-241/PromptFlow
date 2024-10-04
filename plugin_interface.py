@@ -1,8 +1,11 @@
+# plugin_interface.py
 from abc import ABC, abstractmethod
 
 class Plugin(ABC):
-    def __init__(self, container, debug=False):
-        self.container = container
+    def __init__(self, context, debug=False):
+        # Remove the call to super().__init__()
+        # super().__init__()  # This line can be omitted
+        self.context = context
         self.debug = debug
 
     @abstractmethod

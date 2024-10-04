@@ -4,21 +4,21 @@ import ollama
 import logging
 
 class ShouldExploreAgentPlugin(PluginBase):
-    def __init__(self, container, debug=False):
-        super().__init__(container, debug)
-        self.logger = logging.getLogger(__name__)
+    def __init__(self, context, debug=False):
+        super().__init__(context, debug)
+        self.logger = logging.getLogger(self.__class__.__name__)
+        self.logger.debug("Initializing ShouldExploreAgentPlugin")
         self.register_action('should_explore_agent', self.should_explore_agent)
 
     def should_explore_agent(self, *args, **kwargs):
-        problem = self.execute('container_get', 'problem')
-        concept = self.execute('container_get', 'concept')
-        model = self.execute('container_get', 'model')
+        problem = self.di_layer.get('problem')
+        concept = self.di_layer.get('concept')
+        model = self.di_layer.get('model')
 
-        # Render the prompt
-        prompt = self.execute(
+        # Use self.core_execute_action to call core system actions
+        prompt = self.core_execute_action(
             'render_template',
-            'render_template',
-            'should_explore_template.j2',
+            template_name='should_explore_template.j2',
             problem=problem,
             concept=concept
         )
@@ -40,6 +40,6 @@ class ShouldExploreAgentPlugin(PluginBase):
         decision = 'yes' in answer.lower()
 
         # Store the decision
-        self.execute('container_set', key='should_explore', value=decision)
+        self.di_layer.set('should_explore', decision)
 
         return decision

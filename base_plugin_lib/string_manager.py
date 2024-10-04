@@ -1,23 +1,18 @@
+# string_manager.py
 import json
 import os
 from jinja2 import Environment, FileSystemLoader, Template
-from plugin_base import PluginBase
 from typing import Any, Dict
+from logger import LoggerFactory
 
-class StringManagerPlugin(PluginBase):
-    def __init__(self, container: Any, debug: bool = False, template_dir: str = "data/templates", string_dir: str = "data/strings"):
-        super().__init__(container, debug)
+class StringManager:
+    def __init__(self, debug: bool = False, template_dir: str = "data/templates", string_dir: str = "data/strings"):
+        self.debug = debug
+        self.logger = LoggerFactory.create_logger(self.__class__.__name__, self.debug)
         self.template_dir = template_dir
         self.string_dir = string_dir
         self.env = Environment(loader=FileSystemLoader(template_dir))
         self.strings: Dict[str, Any] = self._load_strings()
-        self.register_action('render_template', self.render_template)
-
-    def load(self):
-        if not self.container.get('string_manager'):
-            self.container.set('string_manager', self)
-            if self.debug:
-                print(f"StringManagerPlugin: Registered self as 'string_manager'")
 
     def _load_strings(self):
         strings = {}
@@ -27,8 +22,8 @@ class StringManagerPlugin(PluginBase):
                     strings.update(json.load(f))
         return strings
 
-    def render_template(self, action_name: str, template_name: str, **kwargs):
-        print(f"____________________________render_template: {kwargs}")
+    def render_template(self, template_name: str, **kwargs):
+        self.logger.debug(f"Rendering template: {template_name} with context: {kwargs}")
         template = self.env.get_template(template_name)
         context = self.strings.copy()
         context.update(kwargs)
@@ -41,5 +36,5 @@ class StringManagerPlugin(PluginBase):
                 context[key] = template_string.render(context)
         
         rendered_output = template.render(context)
-        print('_________________________', rendered_output)
+        self.logger.debug(f"Rendered output: {rendered_output}")
         return rendered_output

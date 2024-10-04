@@ -1,21 +1,26 @@
+# data/actions/extract_json_objects.py
 from plugin_base import PluginBase
 import json
+import logging
 
 class ExtractJsonObjectsPlugin(PluginBase):
-    def __init__(self, di_container, debug=False):
-        super().__init__(di_container, debug)
+    def __init__(self, context, debug=False):
+        super().__init__(context, debug)  # Calls PluginBase.__init__(context, debug)
+        self.logger = logging.getLogger(self.__class__.__name__)
+        self.logger.debug("Initializing ExtractJsonObjectsPlugin")
         self.register_action('extract_json_objects', self.extract_json_objects)
-    
+        
     def extract_json_objects(self, *args, **kwargs):
         if self.debug:
             print("ExtractJsonObjectsPlugin: Executing extract_json_objects")
-    
-        text = self.execute('container_get', 'answer')
-    
+
+        # Retrieve the 'answer' text from the DI layer
+        text = self.di_layer.get('answer')
+
         if self.debug:
             print(f"ExtractJsonObjectsPlugin: Retrieved answer text: {text[:100]}...")
-    
-        # Find the first '{' and last '}' in the text
+
+        # Extract JSON objects from the text
         start = text.find('{')
         end = text.rfind('}')
         if start != -1 and end != -1 and end > start:
@@ -33,6 +38,7 @@ class ExtractJsonObjectsPlugin(PluginBase):
             if self.debug:
                 print("No JSON object found in the text.")
             json_objects = []
-    
-        self.execute('container_set', key='json_objects', value=json_objects)
+
+        # Store the json_objects in the DI layer
+        self.di_layer.set('json_objects', json_objects)
         return json_objects
