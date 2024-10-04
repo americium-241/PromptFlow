@@ -28,7 +28,18 @@ class StringManagerPlugin(PluginBase):
         return strings
 
     def render_template(self, action_name: str, template_name: str, **kwargs):
+        print(f"____________________________render_template: {kwargs}")
         template = self.env.get_template(template_name)
         context = self.strings.copy()
         context.update(kwargs)
-        return template.render(context)
+        
+        # Render strings in context that may contain placeholders
+        for key, value in context.items():
+            if isinstance(value, str):
+                # Use Jinja2 Template to render the string with the current context
+                template_string = Template(value)
+                context[key] = template_string.render(context)
+        
+        rendered_output = template.render(context)
+        print('_________________________', rendered_output)
+        return rendered_output

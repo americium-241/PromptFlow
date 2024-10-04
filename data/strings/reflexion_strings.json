@@ -1,0 +1,28 @@
+{
+    "problem": "USER_PROBLEM : {{problem}}",
+    
+    "area_instructions": "INSTRUCTIONS : For a given problem, make a list of all conceptual areas concerned. JSON answered should contain atleast 30 area elements. Answer in the given FORMAT.",
+    "area_format_example": "FORMAT_EXAMPLE :\n{\n\"area_0\": \"\",\n\"area_1\": \"\",\n\"area_2\": \"\"\n}",
+    
+    "consideration_instructions": "INSTRUCTIONS : For a given conceptual area, make a list of all considerations we need. JSON answered should contain atleast 30 consideration elements. Answer in the given FORMAT.",
+    "consideration_format_example": "FORMAT_EXAMPLE :\n{\n\"consideration_0\": \"\",\n\"consideration_1\": \"\",\n\"consideration_2\": \"\"\n}",
+    
+    "format": "FORMAT : Your answer should be in a JSON format given by FORMAT_EXAMPLE.",
+    "important": "IMPORTANT : Fill the JSON as explained in the INSTRUCTIONS.",
+    "your_answer": "YOUR_ANSWER :",
+    "conceptual_area_line": "CONCEPTUAL_AREA : {{conceptual_area}}",
+
+    "concept_line": "CONCEPT : {{test}}",
+    "subconcept_instructions": "INSTRUCTIONS : For the given concept, make a list of all related sub-concepts or aspects. JSON answer should contain at least 10 sub-concept elements. Answer in the given FORMAT.",
+    "subconcept_format_example": "FORMAT_EXAMPLE :\n{\n\"subconcept_0\": \"\",\n\"subconcept_1\": \"\",\n\"subconcept_2\": \"\"\n}",
+
+    "complexity_estimation_instructions": "INSTRUCTIONS : Analyze the given problem and estimate its complexity. Provide appropriate values for 'depth' and 'breadth' to guide a recursive concept exploration process. 'Depth' refers to how many levels deep the exploration should go, and 'Breadth' refers to the number of concepts to consider at each level.",
+    "complexity_estimation_format": "FORMAT : Your answer should be in the JSON format as shown in FORMAT_EXAMPLE.",
+    "complexity_estimation_format_example": "FORMAT_EXAMPLE :\n{\n\"depth\": \"\",\n\"breadth\": \"\"\n}",
+    
+    "rating_instructions": "INSTRUCTIONS : For each item in the given list, rate its pertinence to the problem on a scale from 0 to 10.",
+    "rating_format": "FORMAT : Your answer should be in the JSON format as shown in FORMAT_EXAMPLE.No other structure will be read by user.",
+    "rating_format_example": "FORMAT_EXAMPLE :\n{\n\"item_0\": {\"text\": \"\", \"rating\": \"\"},\n\"item_1\": {\"text\": \"\", \"rating\": \"\"}\n}",
+    "rating_important": "IMPORTANT : Provide the ratings as integers between 0 and 10.",
+    "items_list": "ITEMS_LIST : {{items_list}}"
+}
