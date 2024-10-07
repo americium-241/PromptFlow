@@ -2,6 +2,7 @@
 from plugin_base import PluginBase
 import ollama
 import logging
+# should_explore_agent.py
 
 class ShouldExploreAgentPlugin(PluginBase):
     def __init__(self, context, debug=False):
@@ -15,13 +16,18 @@ class ShouldExploreAgentPlugin(PluginBase):
         concept = self.di_layer.get('concept')
         model = self.di_layer.get('model')
 
+        # Get parent_trace_id from DI layer
+        parent_trace_id = self.di_layer.get('current_trace_id')
+
         # Use self.core_execute_action to call core system actions
         prompt = self.core_execute_action(
             'render_template',
             template_name='should_explore_template.j2',
             problem=problem,
-            concept=concept
+            concept=concept,
+            parent_trace_id=parent_trace_id
         )
+
 
         if self.debug:
             print(f"Prompt for deciding whether to explore '{concept}':")
@@ -43,3 +49,4 @@ class ShouldExploreAgentPlugin(PluginBase):
         self.di_layer.set('should_explore', decision)
 
         return decision
+

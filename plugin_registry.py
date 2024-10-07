@@ -3,17 +3,19 @@ from typing import Dict, Any, List
 from logger import LoggerFactory
 from custom_exceptions import PluginRegistryError
 
-
 class PluginRegistry:
-    def __init__(self, debug: bool = False):
+    def __init__(self, debug: bool = False, execution_id: str = None):
         self.debug = debug
-        self.logger = LoggerFactory.create_logger(self.__class__.__name__, self.debug)
+        self.execution_id = execution_id
+        self.logger = LoggerFactory.create_logger(
+            self.__class__.__name__, self.debug, self.execution_id
+        )
         self.plugins: Dict[str, Any] = {}
         self.actions: Dict[str, Any] = {}
 
     def register_plugin(self, plugin_instance: Any) -> None:
         self.plugins[plugin_instance.__class__.__name__] = plugin_instance
-        self._register_actions(plugin_instance)  # Corrected method call
+        self._register_actions(plugin_instance)
 
     def _register_actions(self, plugin_instance: Any) -> None:
         for action_name in plugin_instance.get_actions():
@@ -39,6 +41,7 @@ class PluginRegistry:
         except Exception as e:
             self.logger.error(f"Error executing action '{action_name}': {e}")
             raise PluginRegistryError(f"Error executing action '{action_name}'.") from e
+
     def has_action(self, action_name: str) -> bool:
         return action_name in self.actions
 

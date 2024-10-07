@@ -8,9 +8,18 @@ from typing import Any, Callable, Dict
 from logger import LoggerFactory
 
 class ActionManager:
-    def __init__(self, debug: bool = False, directory: str = "data/actions", mapping_file: str = "action_mapping.json"):
+    def __init__(
+        self,
+        debug: bool = False,
+        directory: str = "data/actions",
+        mapping_file: str = "action_mapping.json",
+        execution_id: str = None
+    ):
         self.debug = debug
-        self.logger = LoggerFactory.create_logger(self.__class__.__name__, self.debug)
+        self.execution_id = execution_id
+        self.logger = LoggerFactory.create_logger(
+            self.__class__.__name__, self.debug, self.execution_id
+        )
         self.file_manager = FileManager()
         self.directory = directory
         self.mapping_file = os.path.join(directory, mapping_file)

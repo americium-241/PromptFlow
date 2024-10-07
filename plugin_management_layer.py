@@ -3,16 +3,19 @@ from plugin_loader import PluginLoader
 from plugin_registry import PluginRegistry
 from logger import LoggerFactory
 from custom_exceptions import PluginManagementError
-from typing import Dict, Any
+from typing import Any
 
 class PluginManagementLayer:
-    def __init__(self, plugin_directories: list, debug: bool = False):
+    def __init__(self, plugin_directories: list, debug: bool = False, execution_id: str = None):
         self.debug = debug
-        self.logger = LoggerFactory.create_logger(self.__class__.__name__, self.debug)
+        self.execution_id = execution_id
+        self.logger = LoggerFactory.create_logger(
+            self.__class__.__name__, self.debug, self.execution_id
+        )
         self.logger.debug("Initializing PluginManagementLayer")
 
-        self.loader = PluginLoader(plugin_directories, debug)
-        self.registry = PluginRegistry(debug)
+        self.loader = PluginLoader(plugin_directories, debug, self.execution_id)
+        self.registry = PluginRegistry(debug, self.execution_id)
 
     def load_plugins(self, context: Any) -> None:
         self.logger.debug("Loading plugins")

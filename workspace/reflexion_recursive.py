@@ -1,5 +1,13 @@
-# workspace/reflexion_dynamic_recursive.py
+# reflexion_recursive.py
+import uuid
 from core_system import CoreSystem
+from database import init_db
+
+# Initialize the database
+init_db()
+
+# Generate execution_id
+execution_id = str(uuid.uuid4())
 
 config = {
     'plugin_directory': ["data/actions"],
@@ -8,7 +16,11 @@ config = {
     'debug': True
 }
 
+# Initialize the CoreSystem
 core = CoreSystem(config)
+
+# Set the execution_id in the di_layer
+core.set('execution_id', execution_id)
 
 # List all registered plugin actions
 try:
@@ -22,8 +34,8 @@ core.set('model', 'llama3')
 core.set('problem', 'Design a scalable web application architecture.')
 
 # Set maximum limits for depth and breadth
-MAX_DEPTH_LIMIT = 3   # Maximum depth allowed
-MAX_BREADTH_LIMIT = 3 # Maximum breadth allowed
+MAX_DEPTH_LIMIT = 4   # Maximum depth allowed
+MAX_BREADTH_LIMIT =4  # Maximum breadth allowed
 
 # Assume default depth and breadth
 depth = MAX_DEPTH_LIMIT
@@ -37,17 +49,21 @@ def explore_concepts(concept, current_depth):
     indent = '  ' * (current_depth - 1)
     print(f"\n{indent}Exploring at depth {current_depth}: {concept}")
 
-    # Decide whether to explore this concept further
+    # Set the concept in DI layer
     core.set('concept', concept)
-    should_explore = core.execute_action('should_explore_agent')
+
+    # Get parent_trace_id from DI layer
+    parent_trace_id = core.di_layer.get('current_trace_id')
+
+    # Decide whether to explore this concept further
+    should_explore = core.execute_action('should_explore_agent', parent_trace_id=parent_trace_id)
 
     if not should_explore:
         print(f"{indent}Decided not to explore '{concept}' further.")
         return None
 
     # Generate sub-concepts
-    core.execute_action('list_subconcepts_agent')
-
+    core.execute_action('list_subconcepts_agent', parent_trace_id=parent_trace_id)
     # Retrieve the sub-concepts
     subconcepts = core.get('subconcepts')
 
@@ -85,6 +101,7 @@ def explore_concepts(concept, current_depth):
             pass
 
     return concept_tree
+
 
 try:
     concept = core.get('problem')

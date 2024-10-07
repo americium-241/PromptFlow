@@ -6,9 +6,18 @@ from typing import Any, Dict
 from logger import LoggerFactory
 
 class StringManager:
-    def __init__(self, debug: bool = False, template_dir: str = "data/templates", string_dir: str = "data/strings"):
+    def __init__(
+        self,
+        debug: bool = False,
+        template_dir: str = "data/templates",
+        string_dir: str = "data/strings",
+        execution_id: str = None
+    ):
         self.debug = debug
-        self.logger = LoggerFactory.create_logger(self.__class__.__name__, self.debug)
+        self.execution_id = execution_id
+        self.logger = LoggerFactory.create_logger(
+            self.__class__.__name__, self.debug, self.execution_id
+        )
         self.template_dir = template_dir
         self.string_dir = string_dir
         self.env = Environment(loader=FileSystemLoader(template_dir))
@@ -27,14 +36,14 @@ class StringManager:
         template = self.env.get_template(template_name)
         context = self.strings.copy()
         context.update(kwargs)
-        
+
         # Render strings in context that may contain placeholders
         for key, value in context.items():
             if isinstance(value, str):
                 # Use Jinja2 Template to render the string with the current context
                 template_string = Template(value)
                 context[key] = template_string.render(context)
-        
+
         rendered_output = template.render(context)
         self.logger.debug(f"Rendered output: {rendered_output}")
         return rendered_output

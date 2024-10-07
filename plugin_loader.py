@@ -8,10 +8,13 @@ from logger import LoggerFactory
 from custom_exceptions import PluginLoaderError
 
 class PluginLoader:
-    def __init__(self, directories: list, debug: bool = False):
+    def __init__(self, directories: list, debug: bool = False, execution_id: str = None):
         self.directories = directories
         self.debug = debug
-        self.logger = LoggerFactory.create_logger(self.__class__.__name__, self.debug)
+        self.execution_id = execution_id
+        self.logger = LoggerFactory.create_logger(
+            self.__class__.__name__, self.debug, self.execution_id
+        )
         self.logger.debug(f"PluginLoader initialized with directories: {directories}")
 
     def load_plugins(self) -> Dict[str, Any]:
