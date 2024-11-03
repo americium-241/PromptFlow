@@ -1,7 +1,9 @@
 # reflexion_recursive.py
+
 import uuid
 from core_system import CoreSystem
 from database import init_db
+from logger import LoggerFactory
 
 # Initialize the database
 init_db()
@@ -13,14 +15,12 @@ config = {
     'plugin_directory': ["data/actions"],
     'template_dir': "data/templates/",
     'string_dir': "data/strings/",
-    'debug': True
+    'debug': True,
+    'execution_id': execution_id  # Include execution_id in config
 }
 
-# Initialize the CoreSystem
+# Initialize the CoreSystem with the provided execution_id
 core = CoreSystem(config)
-
-# Set the execution_id in the di_layer
-core.set('execution_id', execution_id)
 
 # List all registered plugin actions
 try:
@@ -34,83 +34,30 @@ core.set('model', 'llama3')
 core.set('problem', 'Design a scalable web application architecture.')
 
 # Set maximum limits for depth and breadth
-MAX_DEPTH_LIMIT = 4   # Maximum depth allowed
-MAX_BREADTH_LIMIT =4  # Maximum breadth allowed
+core.set('max_depth', 3)    # Maximum depth allowed
+core.set('max_breadth', 5)  # Maximum breadth allowed
 
-# Assume default depth and breadth
-depth = MAX_DEPTH_LIMIT
-breadth = MAX_BREADTH_LIMIT
-print(f"Using Depth: {depth}, Breadth: {breadth}")
+print(f"Using Depth: {core.get('max_depth')}, Breadth: {core.get('max_breadth')}")
 
-def explore_concepts(concept, current_depth):
-    if current_depth > depth:
-        return None
-
-    indent = '  ' * (current_depth - 1)
-    print(f"\n{indent}Exploring at depth {current_depth}: {concept}")
-
-    # Set the concept in DI layer
-    core.set('concept', concept)
-
-    # Get parent_trace_id from DI layer
-    parent_trace_id = core.di_layer.get('current_trace_id')
-
-    # Decide whether to explore this concept further
-    should_explore = core.execute_action('should_explore_agent', parent_trace_id=parent_trace_id)
-
-    if not should_explore:
-        print(f"{indent}Decided not to explore '{concept}' further.")
-        return None
-
-    # Generate sub-concepts
-    core.execute_action('list_subconcepts_agent', parent_trace_id=parent_trace_id)
-    # Retrieve the sub-concepts
-    subconcepts = core.get('subconcepts')
-
-    # Check if subconcepts were retrieved
-    if not subconcepts:
-        print(f"{indent}No further concepts found for '{concept}'.")
-        return None
-
-    # Flatten the subconcepts and limit to breadth
-    flattened_subconcepts = []
-    for item_dict in subconcepts:
-        for item_key, item_value in item_dict.items():
-            flattened_subconcepts.append((item_key, item_value))
-
-    # Limit to breadth
-    flattened_subconcepts = flattened_subconcepts[:breadth]
-
-    # Collect concepts and recurse
-    concept_tree = {}
-    for item_key, item_value in flattened_subconcepts:
-        if isinstance(item_value, str):
-            sub_text = item_value.strip()
-            print(f"{indent}- {sub_text}")
-            # Recurse into the sub-concept
-            sub_tree = explore_concepts(sub_text, current_depth + 1)
-            concept_tree[sub_text] = sub_tree
-        elif isinstance(item_value, dict):
-            sub_text = item_key.strip()
-            print(f"{indent}- {sub_text}")
-            # Recurse into the sub-concept with item_value
-            sub_tree = explore_concepts(item_value, current_depth + 1)
-            concept_tree[sub_text] = sub_tree
-        else:
-            # Handle other types if necessary
-            pass
-
-    return concept_tree
-
-
+# Execute the recursive planning agent
 try:
-    concept = core.get('problem')
-    concept_hierarchy = explore_concepts(concept, current_depth=1)
+    concept_hierarchy = core.execute_action('recursive_planning_agent')
+    # Retrieve the concept hierarchy from the DI layer
+    concept_hierarchy = core.get('concept_hierarchy')
 except Exception as e:
-    print(f"Error executing recursive exploration: {e}")
+    print(f"Error executing recursive planning agent: {e}")
 
 # Print the final concept hierarchy
 import pprint
 pp = pprint.PrettyPrinter(indent=2)
 print('\nFinal Concept Hierarchy:')
 pp.pprint(concept_hierarchy)
+
+# Ensure LoggerListener stops gracefully
+import atexit
+
+def stop_logger_listener():
+    if LoggerFactory.listener:
+        LoggerFactory.listener.stop()
+
+atexit.register(stop_logger_listener)

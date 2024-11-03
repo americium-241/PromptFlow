@@ -7,9 +7,7 @@ class PluginRegistry:
     def __init__(self, debug: bool = False, execution_id: str = None):
         self.debug = debug
         self.execution_id = execution_id
-        self.logger = LoggerFactory.create_logger(
-            self.__class__.__name__, self.debug, self.execution_id
-        )
+        self.logger = LoggerFactory.create_logger(self.__class__.__name__)
         self.plugins: Dict[str, Any] = {}
         self.actions: Dict[str, Any] = {}
 
@@ -32,7 +30,12 @@ class PluginRegistry:
         try:
             if action_name in self.actions:
                 plugin_instance = self.actions[action_name]
-                return plugin_instance.execute_action(action_name, *args, **kwargs)
+                # Directly execute the action method
+                action_method = plugin_instance.actions.get(action_name)
+                if action_method:
+                    return action_method(*args, **kwargs)
+                else:
+                    raise PluginRegistryError(f"No action '{action_name}' found in plugin '{plugin_instance.__class__.__name__}'.")
             else:
                 self.logger.error(f"No action defined for '{action_name}'")
                 raise PluginRegistryError(f"No action defined for '{action_name}'.")
@@ -41,7 +44,6 @@ class PluginRegistry:
         except Exception as e:
             self.logger.error(f"Error executing action '{action_name}': {e}")
             raise PluginRegistryError(f"Error executing action '{action_name}'.") from e
-
     def has_action(self, action_name: str) -> bool:
         return action_name in self.actions
 

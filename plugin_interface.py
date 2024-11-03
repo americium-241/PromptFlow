@@ -8,11 +8,11 @@ class Plugin(ABC):
         self.context = context
         self.debug = debug
 
-    @abstractmethod
+
     def load(self):
         pass
 
-    @abstractmethod
+
     def unload(self):
         pass
 

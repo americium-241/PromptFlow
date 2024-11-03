@@ -10,19 +10,17 @@ from datetime import datetime
 
 Base = declarative_base()
 
-
 class LogLevel(enum.Enum):
     DEBUG = 'DEBUG'
     INFO = 'INFO'
     WARNING = 'WARNING'
     ERROR = 'ERROR'
-
-
+    CRITICAL = 'CRITICAL'
+    NOTSET = 'NOTSET'
 class ActionStatus(enum.Enum):
     STARTED = 'STARTED'
     COMPLETED = 'COMPLETED'
     FAILED = 'FAILED'
-
 
 class ExecutionSession(Base):
     __tablename__ = 'execution_sessions'
@@ -33,7 +31,6 @@ class ExecutionSession(Base):
 
     action_traces = relationship('ActionTrace', back_populates='execution_session')
     log_entries = relationship('LogEntry', back_populates='execution_session')
-
 
 class ActionTrace(Base):
     __tablename__ = 'action_traces'
@@ -51,7 +48,6 @@ class ActionTrace(Base):
 
     execution_session = relationship('ExecutionSession', back_populates='action_traces')
     parent_trace = relationship('ActionTrace', remote_side=[trace_id], backref='child_traces')
-
 
 class LogEntry(Base):
     __tablename__ = 'log_entries'

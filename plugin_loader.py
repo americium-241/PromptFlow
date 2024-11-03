@@ -6,43 +6,35 @@ from typing import Dict, Any
 from plugin_base import PluginBase
 from logger import LoggerFactory
 from custom_exceptions import PluginLoaderError
-
 class PluginLoader:
-    def __init__(self, directories: list, debug: bool = False, execution_id: str = None):
+    def __init__(self, directories, plugin_registry):
         self.directories = directories
-        self.debug = debug
-        self.execution_id = execution_id
-        self.logger = LoggerFactory.create_logger(
-            self.__class__.__name__, self.debug, self.execution_id
-        )
-        self.logger.debug(f"PluginLoader initialized with directories: {directories}")
+        self.plugin_registry = plugin_registry
+        self.loaded_plugins = set()
+        self.logger = LoggerFactory.create_logger(self.__class__.__name__)
 
-    def load_plugins(self) -> Dict[str, Any]:
-        plugins: Dict[str, Any] = {}
+    def load_plugins(self, context):
         for directory in self.directories:
-            self.logger.debug(f"Loading plugins from directory: {directory}")
-            if not os.path.exists(directory):
-                self.logger.warning(f"Plugin directory does not exist: {directory}")
-                continue
-            plugins.update(self._load_plugins_from_directory(directory))
-        return plugins
+            for filename in os.listdir(directory):
+                if filename.endswith('.py') and filename != '__init__.py':
+                    plugin_path = os.path.join(directory, filename)
+                    if plugin_path in self.loaded_plugins:
+                        self.logger.debug(f"Plugin {filename} already loaded. Skipping.")
+                        continue
+                    self.loaded_plugins.add(plugin_path)
+                    self._load_plugin(plugin_path, context)
 
-    def _load_plugins_from_directory(self, directory: str) -> Dict[str, Any]:
-        plugins: Dict[str, Any] = {}
-        for filename in os.listdir(directory):
-            if filename.endswith(".py") and not filename.startswith("__"):
-                self.logger.debug(f"Loading plugin: {filename}")
-                try:
-                    module = self._load_module(os.path.join(directory, filename))
-                    for name, obj in inspect.getmembers(module):
-                        if inspect.isclass(obj) and issubclass(obj, PluginBase) and obj != PluginBase:
-                            plugins[obj.__name__] = obj
-                            self.logger.debug(f"Loaded plugin class: {obj.__name__}")
-                except Exception as e:
-                    self.logger.error(f"Error loading plugin from {filename}: {str(e)}")
-                    raise PluginLoaderError(f"Error loading plugin from {filename}: {str(e)}")
-        return plugins
-
+    def _load_plugin(self, plugin_path, context):
+        spec = importlib.util.spec_from_file_location("plugin_module", plugin_path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        
+        for attribute_name in dir(module):
+            attribute = getattr(module, attribute_name)
+            if inspect.isclass(attribute) and issubclass(attribute, PluginBase) and attribute is not PluginBase:
+                plugin_instance = attribute(context) # Pass context correctly
+                self.plugin_registry.register_plugin(plugin_instance)
+                self.logger.debug(f"Loaded and registered plugin: {attribute.__name__}")
     def _load_module(self, filepath: str) -> Any:
         spec = importlib.util.spec_from_file_location("plugin_module", filepath)
         module = importlib.util.module_from_spec(spec)

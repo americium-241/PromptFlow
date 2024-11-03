@@ -18,19 +18,31 @@ class PluginContext:
         self.execute_action = execute_action
         self.plugin_manager = plugin_manager
 
+
+
+# core_system.py
+
 class CoreSystem:
     def __init__(self, config: Dict[str, Any]):
+        self.config = config
         self.debug = config.get('debug', True)
-        self.di_layer = DependencyInjectionLayer(self.debug)
-
-        # Generate or retrieve execution_id
-        self.execution_id = self.di_layer.get('execution_id', default=str(uuid.uuid4()))
+        self.di_layer = DependencyInjectionLayer()
+        self.execution_id = config.get('execution_id', str(uuid.uuid4()))
         self.di_layer.set('execution_id', self.execution_id)
-
+        
+        # Initialize Logger
+        LoggerFactory.configure_root_logger(
+            debug=self.debug,
+            execution_id=self.execution_id,
+            di_layer=self.di_layer
+        )
+        self.logger = LoggerFactory.create_logger(self.__class__.__name__)
+        self.logger.debug(f"Initializing CoreSystem with config: {config}")
+        
         # Initialize database session
         self.db_session = SessionLocal()
         self.di_layer.set('db_session', self.db_session)
-
+        
         # Create ExecutionSession entry
         self.execution_session = ExecutionSession(
             execution_id=self.execution_id,
@@ -38,43 +50,42 @@ class CoreSystem:
         )
         self.db_session.add(self.execution_session)
         self.db_session.commit()
-
-        # Initialize logger with execution_id
-        self.logger = LoggerFactory.create_logger(
-            self.__class__.__name__, self.debug, self.execution_id
-        )
-        self.logger.debug(f"Initializing CoreSystem with config: {config}")
-
-        # Initialize Plugin Management Layer
-        self.plugin_layer = PluginManagementLayer(
-            config.get('plugin_directory', []), self.debug, self.execution_id
-        )
-
+        
         # Initialize Core Services
         self.action_manager = ActionManager(
-            self.debug,
+            debug=self.debug,
             directory=config.get('action_directory', "data/actions"),
             execution_id=self.execution_id
         )
         self.string_manager = StringManager(
-            self.debug,
-            template_dir=config.get('template_dir', ""),
-            string_dir=config.get('string_dir', ""),
+            debug=self.debug,
+            template_dir=config.get('template_dir', "data/templates/"),
+            string_dir=config.get('string_dir', "data/strings/"),
             execution_id=self.execution_id
         )
-
-        # Set up dependencies
-        self._initialize_dependencies()
-
-        # Set up context for plugins
+        
+        # Initialize Plugin Management Layer
+        plugin_dirs = config.get('plugin_directory', ["data/actions"])
+        self.plugin_layer = PluginManagementLayer(
+            plugin_dirs,
+            debug=self.debug,
+            execution_id=self.execution_id,
+            core_system=self  # Pass the core system instance
+        )
+        
+        # Initialize plugin context
         self.plugin_context = PluginContext(
             di_layer=self.di_layer,
             execute_action=self.execute_action,
             plugin_manager=self.plugin_layer
         )
-
+        
+        # Set up dependencies
+        self._initialize_dependencies()
+        
         # Load plugins
         self.plugin_layer.load_plugins(self.plugin_context)
+
 
 
     def _initialize_dependencies(self):
@@ -87,8 +98,6 @@ class CoreSystem:
         except Exception as e:
             self.logger.error(f"Failed to initialize dependencies: {str(e)}")
             raise CoreSystemError(f"Failed to initialize dependencies: {str(e)}")
-
-    
 
     def execute_action(self, action_name: str, *args: Any, parent_trace_id: str = None, **kwargs: Any) -> Any:
         self.logger.debug(f"Executing action: {action_name}")
@@ -106,39 +115,35 @@ class CoreSystem:
         self.db_session.add(action_trace)
         self.db_session.commit()
 
-        # Store current trace_id in the DI layer
-        self.di_layer.set('current_trace_id', action_trace.trace_id)
+        # Store current trace_id in the DI layer using a context manager
+        with self.di_layer.trace_context(action_trace.trace_id):
+            try:
+                # Execute the action
+                if self.action_manager.has_action(action_name):
+                    result = self.action_manager.execute_action(action_name, *args, **kwargs)
+                elif hasattr(self.string_manager, action_name):
+                    action = getattr(self.string_manager, action_name)
+                    result = action(*args, **kwargs)
+                elif self.plugin_layer.has_action(action_name):
+                    result = self.plugin_layer.execute_action(action_name, *args, **kwargs)
+                else:
+                    raise CoreSystemError(f"No action named '{action_name}' found.")
 
-        try:
-            # Execute the action as before
-            if self.action_manager.has_action(action_name):
-                result = self.action_manager.execute_action(action_name, *args, **kwargs)
-            elif hasattr(self.string_manager, action_name):
-                action = getattr(self.string_manager, action_name)
-                result = action(*args, **kwargs)
-            elif self.plugin_layer.has_action(action_name):
-                result = self.plugin_layer.execute_action(action_name, *args, **kwargs)
-            else:
-                raise CoreSystemError(f"No action named '{action_name}' found.")
+                # Update ActionTrace
+                action_trace.end_time = datetime.utcnow()
+                action_trace.status = ActionStatus.COMPLETED
+                action_trace.output_data = {'result': result}
+                self.db_session.commit()
+                return result
 
-            # Update ActionTrace
-            action_trace.end_time = datetime.utcnow()
-            action_trace.status = ActionStatus.COMPLETED
-            action_trace.output_data = {'result': result}
-            self.db_session.commit()
-            return result
-
-        except Exception as e:
-            # Update ActionTrace
-            action_trace.end_time = datetime.utcnow()
-            action_trace.status = ActionStatus.FAILED
-            action_trace.output_data = {'error': str(e)}
-            self.db_session.commit()
-            self.logger.error(f"Error executing action '{action_name}': {e}")
-            raise CoreSystemError(f"Error executing action '{action_name}'.") from e
-        finally:
-            # Clear the current_trace_id from the DI layer
-            self.di_layer.set('current_trace_id', None)
+            except Exception as e:
+                # Update ActionTrace
+                action_trace.end_time = datetime.utcnow()
+                action_trace.status = ActionStatus.FAILED
+                action_trace.output_data = {'error': str(e)}
+                self.db_session.commit()
+                self.logger.error(f"Error executing action '{action_name}': {e}")
+                raise CoreSystemError(f"Error executing action '{action_name}'.") from e
 
     def set(self, key: str, value: Any, expected_type: Any = None) -> None:
         self.di_layer.set(key, value, expected_type)

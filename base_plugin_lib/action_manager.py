@@ -1,4 +1,4 @@
-# action_manager.py
+# base_plugin_lib/action_manager.py
 import os
 import importlib.util
 import uuid
@@ -17,9 +17,7 @@ class ActionManager:
     ):
         self.debug = debug
         self.execution_id = execution_id
-        self.logger = LoggerFactory.create_logger(
-            self.__class__.__name__, self.debug, self.execution_id
-        )
+        self.logger = LoggerFactory.create_logger(self.__class__.__name__)
         self.file_manager = FileManager()
         self.directory = directory
         self.mapping_file = os.path.join(directory, mapping_file)
@@ -82,6 +80,7 @@ class ActionManager:
             action_func = getattr(module, func_name)
             return action_func(*args, **kwargs)
         else:
+            self.logger.error(f"No action defined for '{action_name}'.")
             raise ValueError(f"No action defined for '{action_name}'.")
 
     def _load_action_mapping(self):
@@ -100,4 +99,4 @@ class ActionManager:
             self._save_action_mapping()
             self.logger.debug(f"Removed action: {action_name}")
         else:
-            self.logger.debug(f"Action '{action_name}' not found.")
+            self.logger.warning(f"Action '{action_name}' not found.")

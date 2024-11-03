@@ -15,9 +15,7 @@ class StringManager:
     ):
         self.debug = debug
         self.execution_id = execution_id
-        self.logger = LoggerFactory.create_logger(
-            self.__class__.__name__, self.debug, self.execution_id
-        )
+        self.logger = LoggerFactory.create_logger(self.__class__.__name__)
         self.template_dir = template_dir
         self.string_dir = string_dir
         self.env = Environment(loader=FileSystemLoader(template_dir))
